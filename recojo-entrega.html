@@ -1,6 +1,7 @@
 <!--
   Copia de referencia de la plantilla publicada en GitHub Pages
-  (https://github.com/golfredo2023/dashboard-herramientas, archivo recojo-entrega.html).
+  (https://github.com/golfredo2023/dashboard-herramientas, archivo recojo-entrega.html,
+  servida en https://golfredo2023.github.io/dashboard-herramientas/recojo-entrega.html).
 
   Es el "Ticket de Recojo" que el personal de logistica abre desde el enlace del
   mensaje de WhatsApp (link acortado con is.gd, ver server.py:_notificar_recojo_whatsapp_batch)
@@ -10,13 +11,19 @@
   solo como espejo/backup para poder diffear y actualizar rapido.
 
   Flujo para actualizarla:
-    1. Editar este archivo con el cambio nuevo.
+    1. Editar este archivo con el cambio nuevo (o el original en el scratchpad +
+       build_github_version.py, y reaplicar a mano el comentario de cabecera y
+       las correcciones de textContent -- ver mas abajo).
     2. Abrir https://github.com/golfredo2023/dashboard-herramientas/edit/main/recojo-entrega.html
     3. Reemplazar todo el contenido por el de este archivo y hacer commit.
 
   IMPORTANTE: el archivo real en GitHub usa solo caracteres ASCII (entidades HTML
   para tildes/enies/emojis) para evitar problemas de codificacion al copiar/pegar
-  en el editor web de GitHub.
+  en el editor web de GitHub. OJO -- las entidades HTML (&oacute; etc.) SOLO se
+  decodifican cuando el navegador las parsea como HTML (innerHTML, o markup
+  estatico); si un string con entidades se asigna via .textContent, se ve tal
+  cual ("conexi&oacute;n" en vez de "conexion") -- por eso los mensajes que usan
+  .textContent en este archivo estan escritos SIN tildes en vez de con entidades.
 -->
 <!DOCTYPE html>
 <html lang="es">
@@ -155,6 +162,9 @@
   .timer-chip .t { font-family: 'IBM Plex Mono', monospace; font-variant-numeric: tabular-nums; color: var(--ink); }
   .timer-label { font-size: 0.78rem; color: var(--ink-faint); }
 
+  /* Perforaci&oacute;n estilo talonario -- separa el encabezado del cuerpo del ticket.
+     Las muescas van ancladas a los bordes de .ticket (no del ancho del texto),
+     as&iacute; se ven bien en cualquier ancho de pantalla, incluyendo celulares angostos. */
   .ticket { position: relative; }
   .perf {
     position: relative;
@@ -476,7 +486,7 @@
     mostrarPantalla('errorState');
   }
 
-  // Guardado por el servidor como "dd/mm/aaaa HH:MM:SS" (hora de Peru).
+  // Guardado por el servidor como "dd/mm/aaaa HH:MM:SS" (hora de Per&uacute;).
   function parseFechaSolicitud(s) {
     const m = /^(\d{2})\/(\d{2})\/(\d{4}) (\d{2}):(\d{2}):(\d{2})$/.exec(s || '');
     if (!m) return null;
@@ -531,6 +541,12 @@
     }
   }
 
+  // El campo 'personal' guardado dentro de la tarea es una FOTO del cat&aacute;logo al
+  // momento de solicitar el recojo -- si alguien corrige PersonalLogistica
+  // despu&eacute;s (ej. agrega a quien faltaba), esa foto vieja no se actualiza sola.
+  // 'personal_logistica_publico' es la fuente en vivo (tu servidor la sincroniza
+  // cada vez que se guarda el cat&aacute;logo); si por lo que sea todav&iacute;a no existe o
+  // falla, se usa la foto como respaldo en vez de dejar la lista vac&iacute;a.
   async function cargarPersonalEnVivo() {
     try {
       const resp = await fetch(
@@ -545,22 +561,56 @@
     } catch (e) { /* se queda con la foto de tarea.personal como respaldo */ }
   }
 
+  // Agrupa por ubicaci&oacute;n cuando hay muchos equipos en el mismo sitio -- una OT
+  // con 50 equipos en "A1" no deber&iacute;a obligar a hacer scroll por 50 filas
+  // id&eacute;nticas salvo el &iacute;tem. Grupos con m&aacute;s de `umbral` equipos se resumen en
+  // una sola fila ("50 equipos"); los grupos chicos siguen uno por uno, porque
+  // ah&iacute; el detalle s&iacute; sirve. Mismo criterio que dashboard_live.html.
+  function agruparItemsPorUbicacion(items, umbral = 4) {
+    const grupos = new Map();
+    (items || []).forEach(it => {
+      const ubic = (it.ubicacion || '').trim();
+      if (!grupos.has(ubic)) grupos.set(ubic, []);
+      grupos.get(ubic).push(it);
+    });
+    const resultado = [];
+    grupos.forEach((grupoItems, ubic) => {
+      if (grupoItems.length > umbral) {
+        resultado.push({ resumen: true, ubicacion: ubic, cantidad: grupoItems.length });
+      } else {
+        grupoItems.forEach(it => resultado.push({ resumen: false, ubicacion: ubic, item: it }));
+      }
+    });
+    return resultado;
+  }
+
   function renderizarTarea() {
     document.getElementById('otTitle').textContent = 'OT ' + tarea.ot;
     document.getElementById('empresaTitle').textContent = tarea.empresa || '';
 
     const items = Array.isArray(tarea.items) ? tarea.items : [];
-    document.getElementById('itemsList').innerHTML = items.map(it => `
-      <div class="item-row">
-        <div class="item-main">
-          <div class="item-equipo">${it.equipo || 'Equipo'}</div>
-          <div class="item-num">&Iacute;tem ${it.item_numero != null ? it.item_numero : '?'}</div>
-        </div>
-        ${it.ubicacion
-          ? `<span class="ubic-pill">${it.ubicacion}</span>`
-          : `<span class="ubic-pill missing">sin ubicaci&oacute;n</span>`}
-      </div>
-    `).join('');
+    document.getElementById('itemsList').innerHTML = agruparItemsPorUbicacion(items).map(b => {
+      const ubicHtml = b.ubicacion
+        ? `<span class="ubic-pill">${b.ubicacion}</span>`
+        : `<span class="ubic-pill missing">sin ubicaci&oacute;n</span>`;
+      if (b.resumen) {
+        return `
+          <div class="item-row">
+            <div class="item-main">
+              <div class="item-equipo">${b.cantidad} equipos</div>
+            </div>
+            ${ubicHtml}
+          </div>`;
+      }
+      return `
+        <div class="item-row">
+          <div class="item-main">
+            <div class="item-equipo">${b.item.equipo || 'Equipo'}</div>
+            <div class="item-num">&Iacute;tem ${b.item.item_numero != null ? b.item.item_numero : '?'}</div>
+          </div>
+          ${ubicHtml}
+        </div>`;
+    }).join('');
 
     const personal = Array.isArray(tarea.personal) ? tarea.personal : [];
     const quienGrid = document.getElementById('quienGrid');
