@@ -685,6 +685,17 @@
       document.getElementById('successDetail').textContent =
         `Gracias, ${nombreCorto} -- quedo registrado con el motivo indicado.`;
       mostrarPantalla('successState');
+
+      // No tiene sentido dejar la pesta&ntilde;a abierta -- se cierra sola a los pocos
+      // segundos. Ojo: muchos navegadores (sobre todo en celular) bloquean
+      // window.close() en pesta&ntilde;as que la persona abri&oacute; a mano (no por script);
+      // si el navegador lo ignora, el resto del c&oacute;digo sigue corriendo igual y
+      // al menos le avisamos que ya puede cerrarla ella misma.
+      setTimeout(() => {
+        window.close();
+        const detalle = document.getElementById('successDetail');
+        if (detalle) detalle.textContent += ' Ya puedes cerrar esta ventana.';
+      }, 3000);
     } catch (e) {
       submitError.textContent = 'No se pudo registrar la entrega. Revisa tu conexion e intentalo de nuevo.';
       submitError.hidden = false;
