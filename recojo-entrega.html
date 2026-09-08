@@ -10,6 +10,13 @@
   por RLS). NO se sirve desde este proyecto ni desde server.py -- se guarda aqui
   solo como espejo/backup para poder diffear y actualizar rapido.
 
+  NOTA (esquema): recojo_tareas_publicas y personal_logistica_publico viven en
+  el esquema "anexo_v5" (no "public") desde que se separaron las tablas de este
+  proyecto de otras actividades del mismo Supabase (esquemas "manometros",
+  "SGTecnica"). Por eso las lecturas llevan el header 'Accept-Profile': 'anexo_v5'.
+  recojo_entregas sigue en "public" por ahora -- si se migra tambien, agregar
+  'Content-Profile': 'anexo_v5' a los headers del POST mas abajo.
+
   Flujo para actualizarla:
     1. Editar este archivo con el cambio nuevo (o el original en el scratchpad +
        build_github_version.py, y reaplicar a mano el comentario de cabecera y
@@ -518,7 +525,7 @@
     try {
       const resp = await fetch(
         `${SUPABASE_URL}/rest/v1/recojo_tareas_publicas?tarea_id=eq.${encodeURIComponent(tareaId)}&select=*`,
-        { headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` } }
+        { headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}`, 'Accept-Profile': 'anexo_v5' } }
       );
       if (!resp.ok) throw new Error('http ' + resp.status);
       const filas = await resp.json();
@@ -551,7 +558,7 @@
     try {
       const resp = await fetch(
         `${SUPABASE_URL}/rest/v1/personal_logistica_publico?id=eq.1&select=nombres`,
-        { headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` } }
+        { headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}`, 'Accept-Profile': 'anexo_v5' } }
       );
       if (!resp.ok) return;
       const filas = await resp.json();
@@ -672,6 +679,8 @@
           Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
           'Content-Type': 'application/json',
           Prefer: 'return=minimal',
+          // NOTA: recojo_entregas sigue en el esquema "public" por ahora.
+          // Si se migra a "anexo_v5", agregar aqui: 'Content-Profile': 'anexo_v5',
         },
         body: JSON.stringify({
           tarea_id: tareaId,
