@@ -10,12 +10,12 @@
   por RLS). NO se sirve desde este proyecto ni desde server.py -- se guarda aqui
   solo como espejo/backup para poder diffear y actualizar rapido.
 
-  NOTA (esquema): recojo_tareas_publicas y personal_logistica_publico viven en
-  el esquema "anexo_v5" (no "public") desde que se separaron las tablas de este
-  proyecto de otras actividades del mismo Supabase (esquemas "manometros",
-  "SGTecnica"). Por eso las lecturas llevan el header 'Accept-Profile': 'anexo_v5'.
-  recojo_entregas sigue en "public" por ahora -- si se migra tambien, agregar
-  'Content-Profile': 'anexo_v5' a los headers del POST mas abajo.
+  NOTA (esquema): las 3 tablas que usa esta pagina (recojo_tareas_publicas,
+  personal_logistica_publico, recojo_entregas) viven en el esquema "anexo_v5"
+  (no "public") desde que se separaron las tablas de este proyecto de otras
+  actividades del mismo Supabase (esquemas "manometros", "SGTecnica"). Por eso
+  las lecturas llevan 'Accept-Profile': 'anexo_v5' y el POST de entrega lleva
+  'Content-Profile': 'anexo_v5'.
 
   Flujo para actualizarla:
     1. Editar este archivo con el cambio nuevo (o el original en el scratchpad +
@@ -679,8 +679,7 @@
           Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
           'Content-Type': 'application/json',
           Prefer: 'return=minimal',
-          // NOTA: recojo_entregas sigue en el esquema "public" por ahora.
-          // Si se migra a "anexo_v5", agregar aqui: 'Content-Profile': 'anexo_v5',
+          'Content-Profile': 'anexo_v5',
         },
         body: JSON.stringify({
           tarea_id: tareaId,
